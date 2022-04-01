@@ -358,15 +358,35 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Save state", .submenu = &stateSaveMenu };
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Load state", .submenu = &stateLoadMenu };
 
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 1", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(1)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 2", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(2)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 3", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(3)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 4", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(4)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 5", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(5)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 6", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(6)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 7", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(7)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 8", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(8)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 9", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(9)) };
+#define MAX_SAVE_SLOTS 10
+	//TODO Read all states to grab the timestamp
+	for (int i = 0; i < MAX_SAVE_SLOTS; i++) {
+		struct VFile* vf = mCoreGetState(runner->core, i, false);
+		char currentTitle[25];
+		if (vf) {
+			// there is a file in there
+			struct mStateExtdata extdata;
+			mStateExtdataInit(&extdata);
+			void* state = mCoreExtractState(runner->core, vf, &extdata);
+			vf->seek(vf, 0, SEEK_SET);
+			if (!state) {
+				mStateExtdataDeinit(&extdata);
+				return;
+			}
+			struct mStateExtdataItem item;
+			if (mStateExtdataGet(&extdata, EXTDATA_META_TIME, &item) && item.size == sizeof(uint64_t)) {
+				uint64_t creationUsec;
+				LOAD_64LE(creationUsec, 0, item.data);
+				struct timeval tv;
+				if (!gettimeofday(&tv, 0)) {
+					uint64_t usec = tv.tv_usec;
+					usec += tv.tv_sec * 1000000LL;
+				// creation = QDateTime::fromMSecsSinceEpoch(creationUsec / 1000LL);
+			}
+		} else {
+			*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 1" , .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(i)) };
+		}
+	}
 
 	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "Autosave", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(0)) };
 	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 1", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(1)) };
